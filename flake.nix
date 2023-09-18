@@ -1,9 +1,13 @@
 {
-  inputs.horizon-wave-ocean.url = "git+https://gitlab.homotopic.tech/horizon/wave-ocean/horizon-wave-ocean-platform";
-  inputs.nixpkgs.follows = "horizon-wave-ocean/nixpkgs";
-  inputs.utils.url = "github:ursi/flake-utils";
-  # to generate docs
-  inputs.plutus.url = "github:input-output-hk/plutus";
+  inputs = {
+    horizon-wave-ocean.url = "git+https://gitlab.homotopic.tech/horizon/wave-ocean/horizon-wave-ocean-platform";
+    nixpkgs.follows = "horizon-wave-ocean/nixpkgs";
+    utils.url = "github:ursi/flake-utils";
+    # to generate docs
+    plutus.url = "github:input-output-hk/plutus";
+    # external deps
+    hydra.url = "github:input-output-hk/hydra";
+  };
 
   outputs = { self, utils, ... }@inputs:
     utils.apply-systems
@@ -13,7 +17,7 @@
         #  horizon-platform is only supporting linux
         systems = [ "x86_64-linux" ];
       }
-      ({ pkgs, system, ... }@context:
+      ({ pkgs, system, ... }@ctx:
         let
           hsPkgs =
             with pkgs.haskell.lib;
@@ -30,7 +34,7 @@
             ''layer2 > $out'';
           script-check = pkgs.runCommand "script-check" { }
             ''cat ${script}; touch $out'';
-          serve-docs = import ./nix/serve-docs.nix inputs context {
+          serve-docs = import ./nix/serve-docs.nix inputs ctx {
             inherit hsPkgs;
             # TODO transform additionalPkgs in excludePkgs to reduce boilerplate
             #  we could collect all entries from cabal build-depends
@@ -52,7 +56,8 @@
             buildInputs = with pkgs.haskell.packages.ghc8107; attrs.buildInputs ++ [
               serve-docs
               pkgs.cabal-install
-              haskell-language-server
+              # FIXME haskell LSP not building
+              # haskell-language-server
               hlint
             ];
           });
