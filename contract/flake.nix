@@ -23,15 +23,15 @@
             with pkgs.haskell.lib;
             inputs.horizon-wave-ocean.legacyPackages.${system}.extend (hfinal: hprev:
               {
-                layer2 = hprev.developPackage {
+                contract = hprev.developPackage {
                   root = ./.;
                 };
               });
           script = pkgs.runCommand "script"
             {
-              buildInputs = [ hsPkgs.layer2 ];
+              buildInputs = [ hsPkgs.contract ];
             }
-            ''layer2 > $out'';
+            ''contract > $out'';
           script-check = pkgs.runCommand "script-check" { }
             ''cat ${script}; touch $out'';
           serve-docs = import ./nix/serve-docs.nix inputs ctx {
@@ -42,16 +42,16 @@
             additionalPkgs = [
               # FIXME cardano-api doc is not building
               #"cardano-api"
-              #"layer2"
+              #"contract"
             ];
           };
         in
         {
-          packages.default = hsPkgs.layer2;
+          packages.default = hsPkgs.contract;
           packages.script = script;
           packages.serve-docs = serve-docs;
 
-          devShells.default = hsPkgs.layer2.env.overrideAttrs (attrs: {
+          devShells.default = hsPkgs.contract.env.overrideAttrs (attrs: {
             # TODO Extract GHC version from hsPkgs
             buildInputs = with pkgs.haskell.packages.ghc8107; attrs.buildInputs ++ [
               serve-docs
