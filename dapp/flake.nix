@@ -4,8 +4,12 @@
     nixpkgs.follows = "ctl-nix/nixpkgs";
     purs-nix.follows = "ctl-nix/purs-nix";
     utils.url = "github:ursi/flake-utils";
+    npmlock2nix = {
+      url = "github:nix-community/npmlock2nix";
+      flake = false;
+    };
     simplecrypto = {
-      url = "github:alpacaaa/purescript-simplecrypto";
+      url = "github:klarkc/purescript-simplecrypto-purs-0.14";
       flake = false;
     };
     contract.url = "../contract";
@@ -46,6 +50,8 @@
               mkdir -p $out/Scripts
               contract > $out/Scripts/scriptV2.json
             '';
+          npmlock2nix = import inputs.npmlock2nix { inherit pkgs; };
+          node_modules = npmlock2nix.v2.node_modules { src = ./.; } + /node_modules;
           simplecrypto = purs-nix.build {
             name = "simplecrypto";
             src.path = inputs.simplecrypto;
@@ -55,6 +61,7 @@
               node-buffer
               prelude
             ];
+            foreign."Crypto.Simple" = { inherit node_modules; };
           };
           ps = purs-nix.purs
             {
@@ -208,7 +215,7 @@
                   cardano-cli
                   easy-ps.purescript-language-server
                   easy-ps.purs-tidy
-                  purs
+                  easy-ps.purs-0_14_5
                   ps-command
                   purs-watch
                   dev
