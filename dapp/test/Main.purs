@@ -18,15 +18,15 @@ import Contract.Prelude
 
 import Control.Monad.Trans.Class (lift)
 import Contract
-  ( ContractResult
+  ( Address
+  , ContractResult
   , validator
   , deposit
   , withdraw
-  , tree
-  , tx2
   )
-import Contract.Types
-  ( Address
+import Contract.Layer2
+  ( tree
+  , tx2
   )
 import Contract.Address as CA
 import Contract.Config (emptyHooks)
@@ -48,7 +48,6 @@ import Contract.Test.Plutip
 import Contract.Test.Utils as CTU
 import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
-import Contract.Chain as CC
 import Contract.MerkleTree (rootHash, mkProof)
 import Data.Array as DA
 import Data.BigInt as DBI
@@ -131,7 +130,7 @@ suite = do
       checks { depositor, script } = let amount = DBI.fromInt 10_000_000 in
         [ CTA.checkLossAtAddress depositor
           \r -> do
-             { txFinalFee } <- CM.liftContractM "contract did not provided value" r
+             { txFinalFee } <- CM.liftContractM "contract did not provide value" r
              pure $ amount + txFinalFee
         , CTA.checkGainAtAddress' script amount
         ]
