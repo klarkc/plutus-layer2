@@ -155,7 +155,7 @@ suite = do
       checks { beneficiary, script } = let amount = DBI.fromInt 10_000_000 in
         [ CTA.checkGainAtAddress beneficiary
           \r -> do
-             { txFinalFee } <- CM.liftContractM "contract did not provided any value" r
+             { txFinalFee } <- CM.liftContractM "contract did not provide any value" r
              pure $ amount - txFinalFee
         , CTA.checkLossAtAddress' script amount
         ]

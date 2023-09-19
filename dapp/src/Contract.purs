@@ -59,15 +59,14 @@ type ContractResult =
   , txFinalFee :: Value
   }
 
-newtype Redeemer = Redeemer
-    { proof :: Proof
-    , element :: String
-    }
-
-instance CPD.ToData Redeemer where
-  toData (Redeemer { proof, element }) = CPD.Constr CNBN.zero
-    [ CPD.toData proof
-    , CPD.toData element
+data ContractReedemer = ContractRedeemer
+  { element :: TxData
+  , proof :: Proof
+  }
+instance CPD.ToData ContractReedemer where
+  toData (ContractRedeemer { element, proof }) = CPD.Constr CNBN.zero
+    [ CPD.toData element
+    , CPD.toData proof
     ]
 
 ownWalletAddress :: String -> CM.Contract CA.Address
@@ -81,6 +80,7 @@ deposit dp = do
       value = CV.lovelaceValueOf dp.value
       vhash = CS.validatorHash validator
       datum = wrap $ CPD.toData dp.root
+      --datum = CPD.unitDatum
       constraints :: CTC.TxConstraints Unit Unit
       constraints = CTC.mustPayToScript vhash datum CTC.DatumWitness value
       lookups :: CSL.ScriptLookups CPD.PlutusData
@@ -100,13 +100,17 @@ withdraw p = do
   let scriptAddress = CA.scriptHashAddress
         (CS.validatorHash validator)
         Nothing
+      redeemer = wrap $ CPD.toData $ ContractRedeemer
+        { element: p.element
+        , proof: p.proof
+        }
   utxos <- CU.utxosAt scriptAddress
   utxo <- CM.liftContractM "could not find utxo at script address" $
     DA.head $ CT.lookupTxHash p.depositTxId utxos
   let
       txInput = view CT._input utxo
       constraints :: CTC.TxConstraints Unit Unit
-      constraints =    CTC.mustSpendScriptOutput txInput CPD.unitRedeemer
+      constraints = CTC.mustSpendScriptOutput txInput redeemer
 
       lookups :: CSL.ScriptLookups CPD.PlutusData
       lookups =    CSL.validator validator
