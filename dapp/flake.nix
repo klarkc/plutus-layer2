@@ -207,6 +207,7 @@
                   runtime
                   cardano-cli
                   easy-ps.purescript-language-server
+                  easy-ps.purs-tidy
                   purs
                   ps-command
                   purs-watch
