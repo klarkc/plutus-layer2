@@ -4,6 +4,10 @@
     nixpkgs.follows = "ctl-nix/nixpkgs";
     purs-nix.follows = "ctl-nix/purs-nix";
     utils.url = "github:ursi/flake-utils";
+    simplecrypto = {
+      url = "github:alpacaaa/purescript-simplecrypto";
+      flake = false;
+    };
     contract.url = "../contract";
   };
 
@@ -42,6 +46,16 @@
               mkdir -p $out/Scripts
               contract > $out/Scripts/scriptV2.json
             '';
+          simplecrypto = purs-nix.build {
+            name = "simplecrypto";
+            src.path = inputs.simplecrypto;
+            info.dependencies = with purs-nix.ps-pkgs; [
+              effect
+              maybe
+              node-buffer
+              prelude
+            ];
+          };
           ps = purs-nix.purs
             {
               purescript = purs;
@@ -52,6 +66,7 @@
                 with purs-nix.ps-pkgs;
                 [
                   cardano-transaction-lib
+                  simplecrypto
                 ];
               # FFI dependencies
               foreign."Scripts".node_modules = scripts;

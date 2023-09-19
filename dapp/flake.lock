@@ -1978,12 +1978,12 @@
       },
       "locked": {
         "lastModified": 1,
-        "narHash": "sha256-dgSMXmezJJ2njZoU2e+Zu2+EG+lSSUR7GqEdP30Ya/Q=",
-        "path": "/nix/store/wqprlk71g0r3vb9r06iywlmscmlcmkvf-source/contract",
+        "narHash": "sha256-vLWBQ677fvWGApr5Sw8Uhosp6CXDL1YeB8ynAWbXYxk=",
+        "path": "/nix/store/n409qrmpd424lqdiph0q4d42gpg6zyzq-source/contract",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/wqprlk71g0r3vb9r06iywlmscmlcmkvf-source/contract",
+        "path": "/nix/store/n409qrmpd424lqdiph0q4d42gpg6zyzq-source/contract",
         "type": "path"
       }
     },
@@ -10634,6 +10634,7 @@
           "ctl-nix",
           "purs-nix"
         ],
+        "simplecrypto": "simplecrypto",
         "utils": "utils_21"
       }
     },
@@ -10719,6 +10720,22 @@
         "owner": "bitcoin-core",
         "ref": "v0.3.2",
         "repo": "secp256k1",
+        "type": "github"
+      }
+    },
+    "simplecrypto": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1663245423,
+        "narHash": "sha256-alDMZKaP1lIWCqDmYsDINXXdl9lodp6omdG/2f+js5g=",
+        "owner": "alpacaaa",
+        "repo": "purescript-simplecrypto",
+        "rev": "612226cebb15583aa189fb0987af8dcca1caa153",
+        "type": "github"
+      },
+      "original": {
+        "owner": "alpacaaa",
+        "repo": "purescript-simplecrypto",
         "type": "github"
       }
     },

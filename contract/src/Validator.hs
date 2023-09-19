@@ -2,6 +2,7 @@
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# OPTIONS_GHC -ddump-splices #-}
 module Validator (validator) where
 
 import PlutusTx.Prelude
@@ -17,13 +18,14 @@ import Plutus.MerkleTree
   , member
   )
 
+type Datum = Hash
 data Redeemer = Redeemer
   { proof :: Proof
   , element :: BuiltinByteString
   }
 unstableMakeIsData ''Redeemer
 
-validator_ :: Hash -> Redeemer -> ScriptContext -> Bool
+validator_ :: Datum -> Redeemer -> ScriptContext -> Bool
 validator_ root (Redeemer { proof, element }) _ | member element root proof = True 
 validator_ _ _ _ = False 
 
