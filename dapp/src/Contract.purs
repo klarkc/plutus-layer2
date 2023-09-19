@@ -4,14 +4,12 @@ module Contract
   , ownWalletAddress
   , deposit
   , withdraw
+  , tx1
+  , tx2
+  , tx3
+  , tree
   )
   where
-
-import Contract.Types
-  ( ContractResult
-  , TransactionId
-  )
-import Contract.Script ( validator )
 
 import Contract.Prelude
   ( ($)
@@ -24,9 +22,12 @@ import Contract.Prelude
   , discard
   , liftEither
   , wrap
-  , unwrap
   )
-
+import Contract.Types
+  ( ContractResult
+  , TransactionId
+  , TxData
+  )
 import Contract.Address as CA
 import Contract.Monad as CM
 import Contract.ScriptLookups as CSL
@@ -35,8 +36,6 @@ import Contract.Transaction as CT
 import Contract.TxConstraints as CTC
 import Contract.Value as CV
 import Contract.Utxos as CU
-import Contract.Time as CTi
-import Contract.Chain as CC
 import Contract.PlutusData as CPD
 import Contract.Numeric.BigNum as CNBN
 import Contract.MerkleTree
@@ -49,7 +48,6 @@ import Data.Array as DA
 import Data.Lens (view)
 import Contract.Script (validator)
 import Contract.Types as CT
-import Type.Proxy (Proxy(Proxy))
 
 newtype Redeemer = Redeemer
     { proof :: Proof
@@ -62,16 +60,16 @@ instance CPD.ToData Redeemer where
     , CPD.toData element
     ]
 
-tx1 :: Proxy "tx1"
-tx1 = Proxy
+tx1 :: TxData
+tx1 = "tx1Data"
 
-tx2 :: Proxy "tx2"
-tx2 = Proxy
+tx2 :: TxData
+tx2 = "tx2Data"
 
-tx3 :: Proxy "tx3"
-tx3 = Proxy
+tx3 :: TxData
+tx3 = "tx3Data"
 
-tree :: MerkleTree String
+tree :: MerkleTree TxData
 tree = fromFoldable [ tx1, tx2, tx3 ]
 
 ownWalletAddress :: String -> CM.Contract CA.Address
@@ -106,7 +104,7 @@ withdraw p = do
         Nothing
   utxos <- CU.utxosAt scriptAddress
   utxo <- CM.liftContractM "could not find utxo at script address" $
-    DA.head $ CT.lookupTxHash p.donationTxId utxos
+    DA.head $ CT.lookupTxHash p.depositTxId utxos
   let
       txInput = view CT._input utxo
       constraints :: CTC.TxConstraints Unit Unit

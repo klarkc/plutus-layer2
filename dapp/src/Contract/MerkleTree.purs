@@ -3,21 +3,32 @@ module Contract.MerkleTree
   , Proof
   , fromFoldable
   , rootHash
+  , mkProof
   ) where
 
 import Prelude
   ( (/)
   , (-)
+  , (==)
+  , ($)
   )
+import Control.Alt ((<|>))
 import Contract.Crypto
   ( class Hashable
   , Hash
   , hash
   , combineHash
   )
-import Data.Either (Either)
-import Data.List as DL
+import Data.Either (Either (Left, Right))
+import Data.List
+  ( List (Cons, Nil)
+  , fromFoldable
+  , take
+  , drop
+  , length
+  ) as DL
 import Data.Foldable (class Foldable)
+import Data.Maybe (Maybe(Just, Nothing))
 
 data MerkleTree a
   = MerkleEmpty
@@ -25,8 +36,6 @@ data MerkleTree a
   | MerkleLeaf Hash a
 
 type Proof = DL.List (Either Hash Hash)
-
-
 
 rootHash :: forall a. MerkleTree a -> Hash
 rootHash = \t -> case t of
@@ -49,3 +58,16 @@ fromFoldable es = recursively (DL.length es') es'
             rnode = recursively (len - cutoff) r
             c = rootHash lnode `combineHash` rootHash rnode
          in MerkleNode c lnode rnode
+
+mkProof :: forall a. Hashable a => a -> MerkleTree a -> Maybe Proof
+mkProof e = go DL.Nil
+ where
+  he = hash e
+  go es = \tx -> case tx of
+    MerkleEmpty -> Nothing
+    MerkleLeaf h _ ->
+      if h == he
+        then Just es
+        else Nothing
+    MerkleNode _ l r ->
+      go (DL.Cons (Right $ rootHash r) es) l <|> go (DL.Cons (Left $ rootHash l) es) r

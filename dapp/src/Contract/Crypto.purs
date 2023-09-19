@@ -10,7 +10,8 @@ import Crypto.Simple
   ) as Exports
 
 import Prelude
-  ( (<<<)
+  ( class Eq
+  , (<<<)
   , (<>)
   )
 import Crypto.Simple
@@ -21,10 +22,15 @@ import Crypto.Simple
   , toString
   ) as CS
 import Data.Newtype (class Newtype, wrap, unwrap)
+import Contract.PlutusData (class ToData, toData)
 
 newtype Hash = Hash CS.Digest
 
+derive instance Eq Hash
 derive instance Newtype Hash _
+
+instance ToData Hash where
+  toData = toData <<< CS.toString <<< unwrap
 
 hash :: forall a. CS.Hashable a => a -> Hash
 hash = wrap <<< CS.hash CS.SHA256

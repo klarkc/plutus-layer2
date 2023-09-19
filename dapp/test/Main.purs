@@ -14,10 +14,20 @@ import Contract.Prelude
   , pure
   , void
   , discard
-  , wrap
   )
 
 import Control.Monad.Trans.Class (lift)
+import Contract
+  ( ContractResult
+  , validator
+  , deposit
+  , withdraw
+  , tree
+  , tx2
+  )
+import Contract.Types
+  ( Address
+  )
 import Contract.Address as CA
 import Contract.Config (emptyHooks)
 import Contract.Monad as CM
@@ -39,6 +49,7 @@ import Contract.Test.Utils as CTU
 import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
 import Contract.Chain as CC
+import Contract.MerkleTree (rootHash, mkProof)
 import Data.Array as DA
 import Data.BigInt as DBI
 import Data.Maybe (Maybe (Just, Nothing))
@@ -55,15 +66,6 @@ import Effect.Aff
   )
 import Mote (test)
 import Test.Spec.Runner (defaultConfig)
-import Contract
-  ( ContractResult
-  , validator
-  , deposit
-  , withdraw
-  )
-import Contract.Types
-  ( Address
-  )
 
 type Labeled = CTA.Labeled
 type Contract = CM.Contract
@@ -137,6 +139,7 @@ suite = do
        depositor <- getOwnWalletLabeledAddress "depositor"
        script <- getScriptAddress
        let value = DBI.fromInt 10_000_000
+           root = rootHash tree
        void $ CTA.runChecks
         ( checks { depositor, script } )
         ( lift $ deposit { root, value } )
@@ -160,12 +163,19 @@ suite = do
     withWallets distribution \(w1 /\ w2) -> do
        beneficiary <- withKeyWallet w2 $ getOwnWalletLabeledAddress "beneficiary"
        let value = DBI.fromInt 10_000_000
+           root = rootHash tree
        { txId: depositTxId } <- withKeyWallet w1 $ deposit { root, value }
        withKeyWallet w2 do
           script <- getScriptAddress
+          let element = tx2
           void $ CTA.runChecks
             ( checks { beneficiary, script } )
-            ( lift $ withdraw { element, proof, depositTxId } )
+            ( lift do
+                proof <- CM.liftContractM
+                  "element is not in the tree"
+                  (mkProof element tree)
+                withdraw { element, proof, depositTxId }
+            )
 
 main :: Effect Unit
 main = CTU.interruptOnSignal SIGINT =<< launchAff do
