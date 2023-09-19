@@ -1979,11 +1979,11 @@
       "locked": {
         "lastModified": 1,
         "narHash": "sha256-vLWBQ677fvWGApr5Sw8Uhosp6CXDL1YeB8ynAWbXYxk=",
-        "path": "/nix/store/n409qrmpd424lqdiph0q4d42gpg6zyzq-source/contract",
+        "path": "/nix/store/1wxmmggy6vpkvik7hg7n1hj9vzqxi150-source/contract",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/n409qrmpd424lqdiph0q4d42gpg6zyzq-source/contract",
+        "path": "/nix/store/1wxmmggy6vpkvik7hg7n1hj9vzqxi150-source/contract",
         "type": "path"
       }
     },

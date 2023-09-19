@@ -2,20 +2,22 @@ module Contract.MerkleTree
   ( MerkleTree (..)
   , Proof
   , fromFoldable
+  , rootHash
   ) where
 
 import Prelude
   ( (/)
   , (-)
-  , (<>)
   )
-import Crypto.Simple as CS
+import Contract.Crypto
+  ( class Hashable
+  , Hash
+  , hash
+  , combineHash
+  )
 import Data.Either (Either)
 import Data.List as DL
 import Data.Foldable (class Foldable)
-import Data.Semigroup (class Semigroup)
-
-type Hash = CS.Digest
 
 data MerkleTree a
   = MerkleEmpty
@@ -24,23 +26,26 @@ data MerkleTree a
 
 type Proof = DL.List (Either Hash Hash)
 
-hash = CS.hash CS.SHA256
 
-combineHash :: forall a. Semigroup a => CS.Hashable a => a -> a -> Hash
-combineHash h h' = hash (h <> h')
 
-fromFoldable :: forall f a. CS.Hashable a => Foldable f => f a -> MerkleTree a
+rootHash :: forall a. MerkleTree a -> Hash
+rootHash = \t -> case t of
+  MerkleEmpty -> hash ""
+  MerkleLeaf h _ -> h
+  MerkleNode h _ _ -> h
+
+fromFoldable :: forall f a. Hashable a => Foldable f => f a -> MerkleTree a
 fromFoldable es = recursively (DL.length es') es'
  where
   es' = DL.fromFoldable es
-  recursively len = \l -> case l of
+  recursively len = \ls -> case ls of
       DL.Nil -> MerkleEmpty
       DL.Cons e (DL.Nil) -> MerkleLeaf (hash e) e
-      es ->
+      xs ->
         let cutoff = len / 2
-            l = DL.take cutoff es
-            r = DL.drop cutoff es
+            l = DL.take cutoff xs
+            r = DL.drop cutoff xs
             lnode = recursively cutoff l
             rnode = recursively (len - cutoff) r
-            c = combineHash (rootHash lnode) (rootHash rnode)
+            c = rootHash lnode `combineHash` rootHash rnode
          in MerkleNode c lnode rnode

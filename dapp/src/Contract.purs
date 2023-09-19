@@ -2,7 +2,6 @@ module Contract
   ( module Contract.Types
   , module Contract.Script
   , ownWalletAddress
-  , ownBeneficiary
   , deposit
   , withdraw
   )
@@ -43,20 +42,21 @@ import Contract.Numeric.BigNum as CNBN
 import Contract.MerkleTree
   ( MerkleTree
   , Proof
-  , mkMerkleTree
-  , mtRoot
+  , fromFoldable
+  , rootHash
   )
 import Data.Array as DA
 import Data.Lens (view)
 import Contract.Script (validator)
 import Contract.Types as CT
+import Type.Proxy (Proxy(Proxy))
 
-type Redeemer = Redeemer
+newtype Redeemer = Redeemer
     { proof :: Proof
     , element :: String
     }
 
-instance CPD.ToData Datum where
+instance CPD.ToData Redeemer where
   toData (Redeemer { proof, element }) = CPD.Constr CNBN.zero
     [ CPD.toData proof
     , CPD.toData element
@@ -72,17 +72,11 @@ tx3 :: Proxy "tx3"
 tx3 = Proxy
 
 tree :: MerkleTree String
-tree = mkMerkleTree $ DL.fromFoldable [ tx1, tx2, tx3 ]
+tree = fromFoldable [ tx1, tx2, tx3 ]
 
 ownWalletAddress :: String -> CM.Contract CA.Address
 ownWalletAddress s = CM.liftedM ("Failed to get " <> s <> " address") $
   DA.head <$> CA.getWalletAddresses
-
-ownBeneficiary :: CM.Contract CT.Beneficiary
-ownBeneficiary = do
-  ppkh <- CM.liftedM ("Failed to get beneficiary payment pub key hash")
-    $ DA.head <$> CA.ownPaymentPubKeysHashes
-  pure $ wrap ppkh
 
 deposit :: CT.Deposit -> CM.Contract CT.ContractResult
 deposit dp = do
@@ -90,7 +84,7 @@ deposit dp = do
   let
       value = CV.lovelaceValueOf dp.value
       vhash = CS.validatorHash validator
-      datum = wrap $ CPD.toData $ mtRoot tree
+      datum = wrap $ CPD.toData $ rootHash tree
       constraints :: CTC.TxConstraints Unit Unit
       constraints = CTC.mustPayToScript vhash datum CTC.DatumWitness value
       lookups :: CSL.ScriptLookups CPD.PlutusData
