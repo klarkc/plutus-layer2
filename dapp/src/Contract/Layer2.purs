@@ -9,6 +9,7 @@ module Contract.Layer2
 
 import Contract.Crypto (Hash)
 import Contract.MerkleTree (MerkleTree, fromFoldable)
+import Effect (Effect)
 
 type TxData = String
 type Tx = Hash
@@ -22,5 +23,5 @@ tx2 = "tx2Data"
 tx3 :: TxData
 tx3 = "tx3Data"
 
-tree :: MerkleTree TxData
+tree :: Effect (MerkleTree TxData)
 tree = fromFoldable [ tx1, tx2, tx3 ]

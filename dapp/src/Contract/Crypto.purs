@@ -5,15 +5,18 @@ module Contract.Crypto
   , combineHash
   ) where
 
+import Control.Monad.Error.Class (liftMaybe)
 import Crypto.Simple
   ( class Hashable
   ) as Exports
-
-import Prelude
+import Contract.Prelude
   ( class Eq
+  , class Show
   , (<<<)
-  , (<>)
   , ($)
+  , (<>)
+  , bind
+  , pure
   )
 import Crypto.Simple
   ( class Hashable
@@ -21,20 +24,27 @@ import Crypto.Simple
   , Hash(SHA256)
   , hash
   , toString
+  , exportToBuffer
+  , importFromBuffer
   ) as CS
-import Data.Newtype (class Newtype, wrap, unwrap)
 import Contract.PlutusData
   ( class ToData
   , PlutusData (Constr)
   , toData
   )
 import Contract.Numeric.BigNum (zero)
+import Data.Newtype (class Newtype, wrap, unwrap)
+import Data.String (take)
+import Effect (Effect)
+import Effect.Exception (error)
+import Node.Buffer (concat)
 
 newtype Hash = Hash CS.Digest
 
 derive instance Eq Hash
 derive instance Newtype Hash _
-
+instance Show Hash where
+  show h = take 8 $ CS.toString $ unwrap h
 instance ToData Hash where
   toData h = Constr zero
     [ toData $ CS.toString $ unwrap h
@@ -43,5 +53,11 @@ instance ToData Hash where
 hash :: forall a. CS.Hashable a => a -> Hash
 hash = wrap <<< CS.hash CS.SHA256
 
-combineHash :: Hash -> Hash -> Hash
-combineHash h h' = hash (CS.toString (unwrap h) <> CS.toString (unwrap h'))
+combineHash :: Hash -> Hash -> Effect Hash
+combineHash h h' = do
+  let b  = CS.exportToBuffer $ unwrap h
+      b' = CS.exportToBuffer $ unwrap h'
+      err = error "failed to import buffer"
+  bb <- concat [b, b']
+  bb' :: CS.Digest <- liftMaybe err $ CS.importFromBuffer bb
+  pure $ hash bb'

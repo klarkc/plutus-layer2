@@ -15,12 +15,14 @@ import Contract.Prelude
   ( ($)
   , (<>)
   , (<$>)
+  , (>>=)
   , Unit
   , Maybe(Nothing)
   , pure
   , bind
   , discard
   , liftEither
+  , liftEffect
   , wrap
   )
 import Contract.Address as CA
@@ -101,7 +103,7 @@ deposit dp = do
        }
 
 withdraw :: Withdraw -> CM.Contract ContractResult
-withdraw p = case member p.element p.root p.proof of
+withdraw p = liftEffect (member p.element p.root p.proof) >>= case _ of
   false -> CM.throwContractError "could not prove element is in the tree"
   true -> do
     validator <- liftEither validator

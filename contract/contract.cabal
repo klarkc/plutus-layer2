@@ -12,7 +12,8 @@ executable contract
   main-is: Main.hs
   default-language: Haskell2010
   other-modules:
-    Plutus.MerkleTree
+    PlutusTx.MerkleTree
+    PlutusTx.Layer2
     PlutusTx.List
     Validator
   build-depends:

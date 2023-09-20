@@ -14,13 +14,13 @@ import PlutusTx.Prelude
   , (&&)
   )
 import PlutusTx (compile, unstableMakeIsData)
-import Plutus.V2.Ledger.Api (Validator, ScriptContext, mkValidatorScript)
-import Plutus.Script.Utils.Typed (IsScriptContext (mkUntypedValidator))
-import Plutus.MerkleTree
+import PlutusTx.MerkleTree
   ( Hash
   , Proof
   , member
   )
+import Plutus.V2.Ledger.Api (Validator, ScriptContext, mkValidatorScript)
+import Plutus.Script.Utils.Typed (IsScriptContext (mkUntypedValidator))
 
 type Datum = Hash
 data Redeemer = Redeemer
@@ -32,8 +32,6 @@ unstableMakeIsData ''Redeemer
 validator_ :: Datum -> Redeemer -> ScriptContext -> Bool
 validator_ root (Redeemer { proof, element }) _ =
   member element root proof 
---validator_ root (Redeemer { element, proof }) _ | proof == "0" = True 
---validator_ _ _ _ = False 
 
 validator :: Validator
 validator = mkValidatorScript $$(compile [|| wrap ||])

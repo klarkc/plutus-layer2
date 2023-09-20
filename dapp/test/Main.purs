@@ -14,6 +14,8 @@ import Contract.Prelude
   , pure
   , void
   , discard
+  , show
+  , liftEffect
   )
 
 import Control.Monad.Trans.Class (lift)
@@ -29,7 +31,9 @@ import Contract.Layer2
   ( TxData
   , Tx
   , tree
+  , tx1
   , tx2
+  , tx3
   )
 import Contract.Address as CA
 import Contract.Config (emptyHooks)
@@ -51,6 +55,7 @@ import Contract.Test.Plutip
 import Contract.Test.Utils as CTU
 import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
+import Contract.Crypto (hash, combineHash)
 import Contract.MerkleTree
   ( MerkleTree
   , rootHash
@@ -152,8 +157,9 @@ suite = do
     withWallets distribution \kw -> withKeyWallet kw do
        depositor <- getOwnWalletLabeledAddress "depositor"
        script <- getScriptAddress
+       tree_ <- liftEffect tree
        let value = DBI.fromInt 10_000_000
-           root = rootHash tree
+           root = rootHash tree_
        void $ CTA.runChecks
         ( checks { depositor, script } )
         ( lift $ deposit { root, value } )
@@ -180,15 +186,26 @@ suite = do
         ]
     withWallets distribution \(w1 /\ w2) -> do
        beneficiary <- withKeyWallet w2 $ getOwnWalletLabeledAddress "beneficiary"
+       tree_ <- liftEffect tree
        let value = DBI.fromInt 10_000_000
-           root = rootHash tree 
+           root = rootHash tree_
        { txId: depositTxId } <- withKeyWallet w1 $ deposit { root, value }
        withKeyWallet w2 do
           script <- getScriptAddress
           let element = tx2
+              tx2_ = hash tx2
+              tx3_ = hash tx3
           proof <- CM.liftContractM
             "could not produce the proof"
-            (mkProof element tree)
+            (mkProof element tree_)
+          CL.logTrace' $ "Tx2: " <> show tx2_
+          CL.logTrace' $ "Tx3: " <> show tx3_
+          c <- liftEffect (tx2_ `combineHash` tx3_)
+          CL.logTrace' $ "Tx2<>Tx3: " <> show c
+          CL.logTrace' $ "Root: " <> show root
+          CL.logTrace' $ "Tree: " <> show tree_
+          CL.logTrace' $ "Proof: " <> show proof
+          CL.logTrace' $ "Element: " <> show element
           void $ CTA.runChecks
             ( checks
                 { beneficiary

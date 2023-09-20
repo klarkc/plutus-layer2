@@ -7,11 +7,17 @@ module Contract.MerkleTree
   , member
   ) where
 
-import Prelude
-  ( (/)
+import Contract.Prelude
+  ( class Generic
+  , class Show
+  , (/)
   , (-)
   , (==)
   , ($)
+  , (>>=)
+  , genericShow
+  , bind
+  , pure
   )
 import Control.Alt ((<|>))
 import Contract.Crypto
@@ -30,35 +36,40 @@ import Data.List
   ) as DL
 import Data.Foldable (class Foldable)
 import Data.Maybe (Maybe(Just, Nothing))
+import Effect (Effect)
 
 data MerkleTree a
   = MerkleEmpty
   | MerkleNode Hash (MerkleTree a) (MerkleTree a)
   | MerkleLeaf Hash a
 
+derive instance Generic (MerkleTree a) _
+instance Show a => Show (MerkleTree a) where
+  show t = genericShow t
+
 type Proof = DL.List (Either Hash Hash)
 
 rootHash :: forall a. MerkleTree a -> Hash
-rootHash = \t -> case t of
+rootHash = case _ of
   MerkleEmpty -> hash ""
   MerkleLeaf h _ -> h
   MerkleNode h _ _ -> h
 
-fromFoldable :: forall f a. Hashable a => Foldable f => f a -> MerkleTree a
+fromFoldable :: forall f a. Hashable a => Foldable f => f a -> Effect (MerkleTree a)
 fromFoldable es = recursively (DL.length es') es'
  where
   es' = DL.fromFoldable es
-  recursively len = \ls -> case ls of
-      DL.Nil -> MerkleEmpty
-      DL.Cons e (DL.Nil) -> MerkleLeaf (hash e) e
-      xs ->
+  recursively len = case _ of
+      DL.Nil -> pure MerkleEmpty
+      DL.Cons e (DL.Nil) -> pure $ MerkleLeaf (hash e) e
+      xs -> do
         let cutoff = len / 2
             l = DL.take cutoff xs
             r = DL.drop cutoff xs
-            lnode = recursively cutoff l
-            rnode = recursively (len - cutoff) r
-            c = rootHash lnode `combineHash` rootHash rnode
-         in MerkleNode c lnode rnode
+        lnode <- recursively cutoff l
+        rnode <- recursively (len - cutoff) r
+        c <- rootHash lnode `combineHash` rootHash rnode
+        pure $ MerkleNode c lnode rnode
 
 mkProof :: forall a. Hashable a => a -> MerkleTree a -> Maybe Proof
 mkProof e = go DL.Nil
@@ -73,10 +84,10 @@ mkProof e = go DL.Nil
     MerkleNode _ l r ->
       go (DL.Cons (Right $ rootHash r) es) l <|> go (DL.Cons (Left $ rootHash l) es) r
 
-member :: forall a. Hashable a => a -> Hash -> Proof -> Boolean
-member e root = go (hash e)
+member :: forall a. Hashable a => a -> Hash -> Proof -> Effect Boolean
+member e root proof = go proof (hash e)
  where
-  go root' = \xs -> case xs of
-    DL.Nil -> root' == root
-    DL.Cons (Left l) q -> go (combineHash l root') q
-    DL.Cons (Right r) q -> go (combineHash root' r) q
+  go xs root' = case xs of
+    DL.Nil -> pure $ root' == root
+    DL.Cons (Left l) q -> combineHash l root' >>= go q
+    DL.Cons (Right r) q -> combineHash root' r >>= go q

@@ -16,7 +16,7 @@
 -- @
 -- import qualified Plutus.MerkleTree as MT
 -- @
-module Plutus.MerkleTree where
+module PlutusTx.MerkleTree where
 
 import PlutusPrelude hiding (toList)
 
