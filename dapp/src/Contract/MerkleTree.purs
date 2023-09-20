@@ -4,6 +4,7 @@ module Contract.MerkleTree
   , fromFoldable
   , rootHash
   , mkProof
+  , member
   ) where
 
 import Prelude
@@ -71,3 +72,11 @@ mkProof e = go DL.Nil
         else Nothing
     MerkleNode _ l r ->
       go (DL.Cons (Right $ rootHash r) es) l <|> go (DL.Cons (Left $ rootHash l) es) r
+
+member :: forall a. Hashable a => a -> Hash -> Proof -> Boolean
+member e root = go (hash e)
+ where
+  go root' = \xs -> case xs of
+    DL.Nil -> root' == root
+    DL.Cons (Left l) q -> go (combineHash l root') q
+    DL.Cons (Right r) q -> go (combineHash root' r) q

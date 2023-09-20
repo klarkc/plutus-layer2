@@ -20,12 +20,15 @@ import Control.Monad.Trans.Class (lift)
 import Contract
   ( Address
   , ContractResult
+  , Withdraw
   , validator
   , deposit
   , withdraw
   )
 import Contract.Layer2
-  ( tree
+  ( TxData
+  , Tx
+  , tree
   , tx2
   )
 import Contract.Address as CA
@@ -48,7 +51,13 @@ import Contract.Test.Plutip
 import Contract.Test.Utils as CTU
 import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
-import Contract.MerkleTree (rootHash, mkProof)
+import Contract.MerkleTree
+  ( MerkleTree
+  , rootHash
+  , mkProof
+  , member
+  )
+import Contract.Log as CL
 import Data.Array as DA
 import Data.BigInt as DBI
 import Data.Maybe (Maybe (Just, Nothing))
@@ -69,8 +78,14 @@ import Test.Spec.Runner (defaultConfig)
 type Labeled = CTA.Labeled
 type Contract = CM.Contract
 type Params = ( script :: Labeled Address )
-type DepositParams = { depositor :: Labeled Address | Params  }
-type WithdrawParams = { beneficiary :: Labeled Address | Params }
+type DepositParams
+  = { depositor :: Labeled Address
+    | Params  
+    }
+type WithdrawParams
+  = { beneficiary :: Labeled Address
+    | Params
+    }
 
 config :: PlutipConfig
 config =
@@ -152,28 +167,40 @@ suite = do
            , DBI.fromInt 5_000_000
            ]
       checks :: WithdrawParams -> Array (CTA.ContractCheck ContractResult)
-      checks { beneficiary, script } = let amount = DBI.fromInt 10_000_000 in
+      checks { beneficiary, script } =
+        let amount = DBI.fromInt 10_000_000
+         in
         [ CTA.checkGainAtAddress beneficiary
           \r -> do
-             { txFinalFee } <- CM.liftContractM "contract did not provide any value" r
+             { txFinalFee } <- CM.liftContractM
+               "contract did not provide any value" 
+               r
              pure $ amount - txFinalFee
         , CTA.checkLossAtAddress' script amount
         ]
     withWallets distribution \(w1 /\ w2) -> do
        beneficiary <- withKeyWallet w2 $ getOwnWalletLabeledAddress "beneficiary"
        let value = DBI.fromInt 10_000_000
-           root = rootHash tree
+           root = rootHash tree 
        { txId: depositTxId } <- withKeyWallet w1 $ deposit { root, value }
        withKeyWallet w2 do
           script <- getScriptAddress
           let element = tx2
+          proof <- CM.liftContractM
+            "could not produce the proof"
+            (mkProof element tree)
           void $ CTA.runChecks
-            ( checks { beneficiary, script } )
-            ( lift do
-                proof <- CM.liftContractM
-                  "element is not in the tree"
-                  (mkProof element tree)
-                withdraw { element, proof, depositTxId }
+            ( checks
+                { beneficiary
+                , script
+                }
+            )
+            ( lift $ withdraw
+                { element
+                , root
+                , proof
+                , depositTxId
+                }
             )
 
 main :: Effect Unit

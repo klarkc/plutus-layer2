@@ -4,6 +4,7 @@ module Contract
   , Value
   , ContractResult
   , TransactionId
+  , Withdraw
   , ownWalletAddress
   , deposit
   , withdraw
@@ -32,7 +33,11 @@ import Contract.Value as CV
 import Contract.Utxos as CU
 import Contract.PlutusData as CPD
 import Contract.Numeric.BigNum as CNBN
-import Contract.MerkleTree ( Proof )
+import Contract.MerkleTree
+  ( Proof
+  , MerkleTree
+  , member
+  )
 import Data.Array as DA
 import Data.Lens (view)
 import Contract.Script (validator)
@@ -53,6 +58,7 @@ type Withdraw =
   { depositTxId :: TransactionId
   , element :: TxData
   , proof :: Proof
+  , root :: Tx
   }
 type ContractResult =
   { txId :: TransactionId
@@ -95,31 +101,33 @@ deposit dp = do
        }
 
 withdraw :: Withdraw -> CM.Contract ContractResult
-withdraw p = do
-  validator <- liftEither validator
-  let scriptAddress = CA.scriptHashAddress
-        (CS.validatorHash validator)
-        Nothing
-      redeemer = wrap $ CPD.toData $ ContractRedeemer
-        { element: p.element
-        , proof: p.proof
-        }
-  utxos <- CU.utxosAt scriptAddress
-  utxo <- CM.liftContractM "could not find utxo at script address" $
-    DA.head $ CT.lookupTxHash p.depositTxId utxos
-  let
-      txInput = view CT._input utxo
-      constraints :: CTC.TxConstraints Unit Unit
-      constraints = CTC.mustSpendScriptOutput txInput redeemer
+withdraw p = case member p.element p.root p.proof of
+  false -> CM.throwContractError "could not prove element is in the tree"
+  true -> do
+    validator <- liftEither validator
+    let scriptAddress = CA.scriptHashAddress
+          (CS.validatorHash validator)
+          Nothing
+        redeemer = wrap $ CPD.toData $ ContractRedeemer
+          { element: p.element
+          , proof: p.proof
+          }
+    utxos <- CU.utxosAt scriptAddress
+    utxo <- CM.liftContractM "could not find utxo at script address" $
+      DA.head $ CT.lookupTxHash p.depositTxId utxos
+    let
+        txInput = view CT._input utxo
+        constraints :: CTC.TxConstraints Unit Unit
+        constraints = CTC.mustSpendScriptOutput txInput redeemer
 
-      lookups :: CSL.ScriptLookups CPD.PlutusData
-      lookups =    CSL.validator validator
-                <> CSL.unspentOutputs utxos
-  ubTx <- CM.liftedE $ CSL.mkUnbalancedTx lookups constraints
-  bsTx <- CM.liftedE $ CT.balanceTx ubTx
-  tx <- CT.signTransaction bsTx
-  txId <- CT.submit tx
-  CT.awaitTxConfirmed txId
-  pure { txId
-       , txFinalFee: CT.getTxFinalFee tx
-       }
+        lookups :: CSL.ScriptLookups CPD.PlutusData
+        lookups =    CSL.validator validator
+                  <> CSL.unspentOutputs utxos
+    ubTx <- CM.liftedE $ CSL.mkUnbalancedTx lookups constraints
+    bsTx <- CM.liftedE $ CT.balanceTx ubTx
+    tx <- CT.signTransaction bsTx
+    txId <- CT.submit tx
+    CT.awaitTxConfirmed txId
+    pure { txId
+         , txFinalFee: CT.getTxFinalFee tx
+         }
