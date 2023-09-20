@@ -37,7 +37,6 @@ import Contract.PlutusData as CPD
 import Contract.Numeric.BigNum as CNBN
 import Contract.MerkleTree
   ( Proof
-  , MerkleTree
   , member
   )
 import Data.Array as DA
@@ -88,7 +87,6 @@ deposit dp = do
       value = CV.lovelaceValueOf dp.value
       vhash = CS.validatorHash validator
       datum = wrap $ CPD.toData dp.root
-      --datum = CPD.unitDatum
       constraints :: CTC.TxConstraints Unit Unit
       constraints = CTC.mustPayToScript vhash datum CTC.DatumWitness value
       lookups :: CSL.ScriptLookups CPD.PlutusData

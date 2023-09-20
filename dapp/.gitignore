@@ -1,4 +1,5 @@
-/.psc-ide-port
+/.psc*
+/.purs*
 /result
 /output
 /node_modules

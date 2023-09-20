@@ -1978,12 +1978,12 @@
       },
       "locked": {
         "lastModified": 1,
-        "narHash": "sha256-vO0ghkAyAWyd2fge5ZmQT61YUDqJq6mNH0nPvWcu7SU=",
-        "path": "/nix/store/zl9r1z3ns0jwx9jh7cmbfqb0gxb8afy3-source/contract",
+        "narHash": "sha256-Mc3JB+gTWOARBrB5TPYLYNIIdbGUGXK6sbpdHZgMOUM=",
+        "path": "/nix/store/qgw1pbr80fxa706hz1d1ng9q0yk8i11q-source/contract",
         "type": "path"
       },
       "original": {
-        "path": "/nix/store/zl9r1z3ns0jwx9jh7cmbfqb0gxb8afy3-source/contract",
+        "path": "/nix/store/qgw1pbr80fxa706hz1d1ng9q0yk8i11q-source/contract",
         "type": "path"
       }
     },

@@ -16,6 +16,8 @@ executable contract
     PlutusTx.Layer2
     PlutusTx.List
     Validator
+    Validator.Trace
+    Validator.Types
   build-depends:
       base
     , base16-bytestring

@@ -14,7 +14,6 @@ import Contract.Prelude
   , class Show
   , (<<<)
   , ($)
-  , (<>)
   , bind
   , pure
   )

@@ -57,10 +57,8 @@ import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
 import Contract.Crypto (hash, combineHash)
 import Contract.MerkleTree
-  ( MerkleTree
-  , rootHash
+  ( rootHash
   , mkProof
-  , member
   )
 import Contract.Log as CL
 import Data.Array as DA
