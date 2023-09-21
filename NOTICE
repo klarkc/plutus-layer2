@@ -1,0 +1,12 @@
+Copyright 2023 Walker Gusmão Leite
+
+This product includes software developed by
+Walker Gusmão Leite.
+
+The Initial Developer of the contract/src/PlutusTx/MerkleTree.hs, 
+is Input Output Global Ltd.
+Copyright 2021-2022 Input Output Global Ltd. All Rights Reserved.
+
+The Initial Developer of some parts of the dapp/src/Contract/MerkleTree.purs, which are copied from, derived from, or
+inspired by contract/src/PlutusTx/MerkleTree.hs, is is Input Output Global Ltd.
+Copyright 2021-2022 Input Output Global Ltd. All Rights Reserved.
