@@ -8,6 +8,7 @@ module Validator.Trace
 
 import PlutusTx.Prelude
   ( BuiltinByteString
+  , Bool(True, False)
   , Either (Left, Right)
   , ($)
   , (<>)
@@ -24,15 +25,18 @@ import Validator.Types
   , Datum
   )
 
-trace :: (Datum -> Redeemer -> a) -> Datum -> Redeemer -> a
-trace f dat red = f (traceDatum dat) (traceRedeemer red)
+trace :: (Datum -> Redeemer -> sc -> Bool) -> Datum -> Redeemer -> sc -> Bool
+trace f dat red ctx = let ret = f (traceDatum dat) (traceRedeemer red) ctx
+                   in case ret of
+                        True -> PTX.trace "Success" ret
+                        False -> PTX.trace "Failure" ret
 {-# INLINEABLE trace #-}
 
 traceDatum :: Datum -> Datum
 traceDatum d
-  = PTX.trace "/Datum_Hash"
+  = PTX.trace "/Datum"
   $ traceHash
-  $ PTX.trace "Datum_Hash" d
+  $ PTX.trace "Datum" d
 {-# INLINEABLE traceDatum #-}
 
 traceRedeemer :: Redeemer -> Redeemer
@@ -55,8 +59,8 @@ traceProof proof
         = PTX.trace ("/" <> lr)
         $ traceHash
         $ PTX.trace lr h
-      traceEither (Left h) = Left $ trace' "L" h
-      traceEither (Right h) = Right $ trace' "R" h
+      traceEither (Left h) = Left $ trace' "Left" h
+      traceEither (Right h) = Right $ trace' "Right" h
 {-# INLINEABLE traceProof #-}
 
 traceHash :: Hash -> Hash

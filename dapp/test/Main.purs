@@ -12,10 +12,12 @@ import Contract.Prelude
   , flip
   , bind
   , pure
+  , unit
   , void
   , discard
   , show
   , liftEffect
+  , isLeft
   )
 
 import Control.Monad.Trans.Class (lift)
@@ -30,11 +32,13 @@ import Contract
 import Contract.Layer2
   ( TxData
   , Tx
+  , Tree
   , tree
+  , root
   , tx1
   , tx2
   , tx3
-  )
+  ) as L2
 import Contract.Address as CA
 import Contract.Config (emptyHooks)
 import Contract.Monad as CM
@@ -57,10 +61,13 @@ import Contract.Test.Assert as CTA
 import Contract.Scripts as CS
 import Contract.Crypto (hash, combineHash)
 import Contract.MerkleTree
-  ( rootHash
+  ( Proof
+  , rootHash
   , mkProof
+  , fromFoldable
   )
 import Contract.Log as CL
+import Data.Either (Either (Left))
 import Data.Array as DA
 import Data.BigInt as DBI
 import Data.Maybe (Maybe (Just, Nothing))
@@ -77,6 +84,10 @@ import Effect.Aff
   )
 import Mote (test)
 import Test.Spec.Runner (defaultConfig)
+import Test.Spec.Assertions
+  ( shouldSatisfy
+  , shouldEqual
+  )
 
 type Labeled = CTA.Labeled
 type Contract = CM.Contract
@@ -135,6 +146,14 @@ getScriptAddress = do
           CA.validatorHashEnterpriseAddress nId validator'
         pure $ CTA.label valAddr "script"
 
+liftProof :: L2.TxData -> Effect (L2.Tree L2.TxData) -> Contract Proof
+liftProof element tree = do
+  tree_ <- liftEffect tree
+  proof <- CM.liftContractM
+    "Could not produce the proof for the layer2 chain"
+    (mkProof element tree_)
+  pure proof
+
 suite :: TestPlanM ContractTest Unit
 suite = do
   test "depositor locks ADA and a root hash in the contract" do
@@ -155,9 +174,8 @@ suite = do
     withWallets distribution \kw -> withKeyWallet kw do
        depositor <- getOwnWalletLabeledAddress "depositor"
        script <- getScriptAddress
-       tree_ <- liftEffect tree
+       root <- liftEffect L2.root
        let value = DBI.fromInt 10_000_000
-           root = rootHash tree_
        void $ CTA.runChecks
         ( checks { depositor, script } )
         ( lift $ deposit { root, value } )
@@ -184,26 +202,16 @@ suite = do
         ]
     withWallets distribution \(w1 /\ w2) -> do
        beneficiary <- withKeyWallet w2 $ getOwnWalletLabeledAddress "beneficiary"
-       tree_ <- liftEffect tree
-       let value = DBI.fromInt 10_000_000
-           root = rootHash tree_
-       { txId: depositTxId } <- withKeyWallet w1 $ deposit { root, value }
+       root <- liftEffect L2.root
+       { txId: depositTxId } <- withKeyWallet w1
+        $ deposit { root
+                  , value: DBI.fromInt 10_000_000
+                  }
        withKeyWallet w2 do
+          let element = L2.tx2
           script <- getScriptAddress
-          let element = tx2
-              tx2_ = hash tx2
-              tx3_ = hash tx3
-          proof <- CM.liftContractM
-            "could not produce the proof"
-            (mkProof element tree_)
-          CL.logTrace' $ "Tx2: " <> show tx2_
-          CL.logTrace' $ "Tx3: " <> show tx3_
-          c <- liftEffect (tx2_ `combineHash` tx3_)
-          CL.logTrace' $ "Tx2<>Tx3: " <> show c
-          CL.logTrace' $ "Root: " <> show root
-          CL.logTrace' $ "Tree: " <> show tree_
-          CL.logTrace' $ "Proof: " <> show proof
-          CL.logTrace' $ "Element: " <> show element
+          proof <- liftProof element L2.tree
+          l2root <- liftEffect L2.root
           void $ CTA.runChecks
             ( checks
                 { beneficiary
@@ -212,11 +220,45 @@ suite = do
             )
             ( lift $ withdraw
                 { element
-                , root
+                , l2root
                 , proof
                 , depositTxId
+                , validate: false
                 }
             )
+  test "beneficiary can't unlock any ADA in the contract, given proof is invalid" do
+    let
+      distribution =
+           [ DBI.fromInt 20_000_000
+           , DBI.fromInt 5_000_000
+           ]
+        /\ [ DBI.fromInt 1_000_000
+           , DBI.fromInt 5_000_000
+           ]
+    withWallets distribution \(w1 /\ w2) -> do
+       root <- liftEffect L2.root
+       { txId: depositTxId } <- withKeyWallet w1
+        $ deposit { root
+                  , value: DBI.fromInt 10_000_000
+                  }
+       withKeyWallet w2 do
+          let fakeTx2 = "tx2DataFake"
+              element = fakeTx2
+              tree = fromFoldable [ L2.tx1, fakeTx2, L2.tx3 ]
+          proof <- liftProof element tree
+          l2root <- liftEffect L2.root
+          ret /\ failures <- CTA.collectAssertionFailures
+            [ ] 
+            ( lift $ withdraw
+                { element
+                , l2root
+                , proof
+                , depositTxId
+                , validate: false
+                }
+            )
+          ret `shouldSatisfy` isLeft
+          failures `shouldEqual` []
 
 main :: Effect Unit
 main = CTU.interruptOnSignal SIGINT =<< launchAff do

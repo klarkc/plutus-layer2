@@ -75,7 +75,7 @@ mkProof :: forall a. Hashable a => a -> MerkleTree a -> Maybe Proof
 mkProof e = go DL.Nil
  where
   he = hash e
-  go es = \tx -> case tx of
+  go es = case _ of
     MerkleEmpty -> Nothing
     MerkleLeaf h _ ->
       if h == he
@@ -87,7 +87,8 @@ mkProof e = go DL.Nil
 member :: forall a. Hashable a => a -> Hash -> Proof -> Effect Boolean
 member e root proof = go proof (hash e)
  where
+  comb l r q = combineHash l r >>= go q
   go xs root' = case xs of
     DL.Nil -> pure $ root' == root
-    DL.Cons (Left l) q -> combineHash l root' >>= go q
-    DL.Cons (Right r) q -> combineHash root' r >>= go q
+    DL.Cons (Left l) q -> comb l root' q
+    DL.Cons (Right r) q -> comb root' r q

@@ -1,7 +1,9 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE NoImplicitPrelude   #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE OverloadedStrings     #-}
 {-# OPTIONS_GHC -ddump-splices #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:dump-uplc #-}
 module Validator (validator) where
 
 import PlutusTx.Prelude
@@ -23,9 +25,6 @@ import Validator.Types
   , element
   , proof
   )
-import Validator.Trace
-  ( trace
-  )
 
 -- FIXME move this function to Validator.Types to avoid orphan instances
 unstableMakeIsData ''Redeemer
@@ -36,4 +35,4 @@ validator_ root r _ = member (element r) root (proof r)
 validator :: Validator
 validator = mkValidatorScript $$(compile [|| wrap ||])
   where
-    wrap = mkUntypedValidator (trace validator_)
+    wrap = mkUntypedValidator validator_

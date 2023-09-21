@@ -16,6 +16,7 @@ import Contract.Prelude
   , (<>)
   , (<$>)
   , (>>=)
+  , (&&)
   , Unit
   , Maybe(Nothing)
   , pure
@@ -24,6 +25,7 @@ import Contract.Prelude
   , liftEither
   , liftEffect
   , wrap
+  , not
   )
 import Contract.Address as CA
 import Contract.Monad as CM
@@ -46,6 +48,7 @@ import Contract.Layer2
   ( Tx
   , TxData
   )
+import Contract.Log as CL
 import Data.BigInt as DBI
 
 type Value = DBI.BigInt
@@ -59,7 +62,8 @@ type Withdraw =
   { depositTxId :: TransactionId
   , element :: TxData
   , proof :: Proof
-  , root :: Tx
+  , l2root :: Tx
+  , validate :: Boolean
   }
 type ContractResult =
   { txId :: TransactionId
@@ -101,9 +105,13 @@ deposit dp = do
        }
 
 withdraw :: Withdraw -> CM.Contract ContractResult
-withdraw p = liftEffect (member p.element p.root p.proof) >>= case _ of
-  false -> CM.throwContractError "could not prove element is in the tree"
-  true -> do
+withdraw p = liftEffect (member p.element p.l2root p.proof)
+  >>= \r -> if p.validate && not r
+  then do 
+    let err = "With the given prove I could not prove the element is in the tree of the root"
+    CL.logError' err
+    CM.throwContractError err
+  else do
     validator <- liftEither validator
     let scriptAddress = CA.scriptHashAddress
           (CS.validatorHash validator)

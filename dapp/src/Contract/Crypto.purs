@@ -9,6 +9,7 @@ import Control.Monad.Error.Class (liftMaybe)
 import Crypto.Simple
   ( class Hashable
   ) as Exports
+import Contract.Prim.ByteArray (hexToByteArrayUnsafe)
 import Contract.Prelude
   ( class Eq
   , class Show
@@ -43,14 +44,17 @@ newtype Hash = Hash CS.Digest
 derive instance Eq Hash
 derive instance Newtype Hash _
 instance Show Hash where
-  show h = take 8 $ CS.toString $ unwrap h
+  show = take 8 <<< hashToHex
 instance ToData Hash where
   toData h = Constr zero
-    [ toData $ CS.toString $ unwrap h
+    [ toData $ hexToByteArrayUnsafe $ hashToHex h
     ] 
 
 hash :: forall a. CS.Hashable a => a -> Hash
 hash = wrap <<< CS.hash CS.SHA256
+
+hashToHex :: Hash -> String
+hashToHex = CS.toString <<< unwrap
 
 combineHash :: Hash -> Hash -> Effect Hash
 combineHash h h' = do
